@@ -57,6 +57,8 @@ def criar_dfs_excel():
 
     st.session_state.df_historico['Apenas Data'] = st.session_state.df_historico['Data de Abastecimento'].dt.date
 
+    st.session_state.df_historico['meta_batida'] = st.session_state.df_historico.apply(lambda row: 1 if row['Consumo real'] >= row['Consumo estimado'] else 0, axis = 1)
+
 def plotar_listas_analise(df_ref, coluna_df_ref, subheader):
 
     lista_ref = df_ref[coluna_df_ref].unique().tolist()
