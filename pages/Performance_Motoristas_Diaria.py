@@ -291,6 +291,13 @@ if data_inicial and data_final:
 
                 veiculo = selected_rows_2['Veiculo'].iloc[0]
 
+                df_veiculo = montar_df_analise_mensal(df_filtro_data, 'Veiculo', veiculo)
+
+                with row4[1]:
+    
+                    grafico_duas_barras_linha_percentual(df_veiculo, 'Apenas Data', 'serviços', 'Serviços', 'meta_batida', 'Metas Batidas', 'performance', 
+                                                            'Performance', veiculo)
+
                 df_resumo_performance_motorista_veiculo = df_filtro_data[(df_filtro_data['Veiculo']==veiculo) & 
                                                                             (df_filtro_data['Tipo de Veiculo']==tipo_veiculo)].groupby(['Colaborador'])\
                                                                             .agg({'meta_batida': 'sum', 'Rota': 'count'}).reset_index()
@@ -302,7 +309,7 @@ if data_inicial and data_final:
                 gb.configure_grid_options(domLayout='autoHeight')
                 gridOptions = gb.build()
 
-                with row4[1]:
+                with row4[0]:
 
                     grid_response = AgGrid(df_resumo_performance_motorista_veiculo, gridOptions=gridOptions, enable_enterprise_modules=False, 
                                             fit_columns_on_grid_load=True)
