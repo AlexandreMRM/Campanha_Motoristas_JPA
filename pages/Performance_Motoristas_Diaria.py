@@ -8,36 +8,43 @@ from st_aggrid import AgGrid, GridOptionsBuilder
 
 def criar_dfs_excel():
 
-    nome_excel = 'Campanha_Motoristas_Natal.xlsx'
+    nome_credencial = st.secrets["CREDENCIAL_SHEETS"]
+    credentials = service_account.Credentials.from_service_account_info(nome_credencial)
+    scope = ['https://www.googleapis.com/auth/spreadsheets']
+    credentials = credentials.with_scopes(scope)
+    client = gspread.authorize(credentials)
+    
+    spreadsheet = client.open_by_key('1Sx6CYMIuFzpeTur5WibxofQfiTk6hyohA3huDCHhKDg')
 
-    st.session_state.df_motoristas = pd.read_excel(nome_excel, sheet_name='BD - Motoristas')
+    lista_abas = ['BD - Historico', 'BD - Frota | Tipo']
 
-    st.session_state.df_frota = pd.read_excel(nome_excel, sheet_name='BD - Frota | Tipo')
+    lista_df_hoteis = ['df_historico', 'df_frota']
 
-    st.session_state.df_frota['Veiculo'] = st.session_state.df_frota['Veiculo'].astype(str)
+    for index in range(len(lista_abas)):
 
-    st.session_state.df_historico = pd.read_excel(nome_excel, sheet_name='BD - Historico')
+        aba = lista_abas[index]
 
-    st.session_state.df_historico = st.session_state.df_historico[st.session_state.df_historico['Veículo']!='Total'].reset_index(drop=True)
+        df_hotel = lista_df_hoteis[index]
+        
+        sheet = spreadsheet.worksheet(aba)
 
-    for index in range(len(st.session_state.df_historico)):
+        sheet_data = sheet.get_all_values()
 
-        if pd.isna(st.session_state.df_historico.at[index, 'Veículo']):
+        st.session_state[df_hotel] = pd.DataFrame(sheet_data[1:], columns=sheet_data[0])
 
-            st.session_state.df_historico.at[index, 'Veículo']=st.session_state.df_historico.at[index-1, 'Veículo']
+    st.session_state.df_historico['Média'] = st.session_state.df_historico['Média'].str.replace(',', '.')
 
-    lista_motoristas_historico = st.session_state.df_historico['Colaborador'].unique().tolist()
+    st.session_state.df_historico['Média'] = pd.to_numeric(st.session_state.df_historico['Média'], errors='coerce')
 
-    for motorista in lista_motoristas_historico:
+    st.session_state.df_historico['Meta'] = st.session_state.df_historico['Meta'].str.replace(',', '.')
 
-        if motorista in st.session_state.df_motoristas['Motorista Sofit'].unique().tolist():
+    st.session_state.df_historico['Meta'] = pd.to_numeric(st.session_state.df_historico['Meta'], errors='coerce')
 
-            st.session_state.df_historico.loc[st.session_state.df_historico['Colaborador']==motorista, 'Colaborador']=\
-                st.session_state.df_motoristas.loc[st.session_state.df_motoristas['Motorista Sofit']==motorista, 'Motorista Análise'].values[0]
-            
-    st.session_state.df_historico['ano'] = st.session_state.df_historico['Data'].dt.year
+    st.session_state.df_historico['Data de Abastecimento'] = pd.to_datetime(st.session_state.df_historico['Data de Abastecimento'], format='%Y-%m-%d %H:%M:%S')
+    
+    st.session_state.df_historico['ano'] = st.session_state.df_historico['Data de Abastecimento'].dt.year
 
-    st.session_state.df_historico['mes'] = st.session_state.df_historico['Data'].dt.month
+    st.session_state.df_historico['mes'] = st.session_state.df_historico['Data de Abastecimento'].dt.month
 
     st.session_state.df_historico['ano_mes'] = st.session_state.df_historico['mes'].astype(str) + '/' + \
             st.session_state.df_historico['ano'].astype(str).str[-2:]
@@ -46,7 +53,7 @@ def criar_dfs_excel():
     
     st.session_state.df_historico = pd.merge(st.session_state.df_historico, st.session_state.df_frota, on='Veiculo', how='left')
 
-    st.session_state.df_historico['Apenas Data'] = st.session_state.df_historico['Data'].dt.date
+    st.session_state.df_historico['Apenas Data'] = st.session_state.df_historico['Data de Abastecimento'].dt.date
 
 def plotar_listas_analise(df_ref, coluna_df_ref, subheader):
 
@@ -63,9 +70,9 @@ def plotar_listas_analise(df_ref, coluna_df_ref, subheader):
 def montar_df_analise_mensal(df_ref, coluna_ref, info_filtro):
 
     df_mensal = df_ref[(df_ref[coluna_ref] == info_filtro)].groupby('Apenas Data')\
-        .agg({'Consumo estimado': 'count', 'meta_batida': 'sum', 'ano': 'first', 'mes': 'first', 'Colaborador': 'first'}).reset_index()
+        .agg({'Meta': 'count', 'meta_batida': 'sum', 'ano': 'first', 'mes': 'first', 'Colaborador': 'first'}).reset_index()
 
-    df_mensal = df_mensal.rename(columns = {'Consumo estimado': 'serviços', 'Colaborador': 'colaborador'})
+    df_mensal = df_mensal.rename(columns = {'Meta': 'serviços', 'Colaborador': 'colaborador'})
 
     df_mensal['performance'] = round(df_mensal['meta_batida'] / df_mensal['serviços'], 2)
 
@@ -138,7 +145,7 @@ def plotar_tabela_mes_atual(df_ref, coluna_group, dict_colunas):
 
     df_mes_atual = df_ref[(df_ref['Apenas Data']>=data_inicial) & (df_ref['Apenas Data']<=data_final) & (df_ref['Veiculo']==veiculo)].reset_index(drop=True)
 
-    df_group = df_mes_atual.groupby(coluna_group).agg({'Consumo estimado':'count', 'meta_batida': 'sum'}).reset_index()
+    df_group = df_mes_atual.groupby(coluna_group).agg({'Meta':'count', 'meta_batida': 'sum'}).reset_index()
 
     df_group = df_group.rename(columns=dict_colunas)
 
@@ -179,7 +186,7 @@ def exibir_tabela(df):
 
 st.set_page_config(layout='wide')
 
-st.title('Performance Diária Motoristas - Natal')
+st.title('Performance Diária Motoristas - João Pessoa')
 
 st.divider()
 
@@ -207,10 +214,6 @@ with row0[1]:
 
     atualizar_dfs_excel = st.button('Atualizar Dados')
 
-    percentual_apoios = st.number_input('Desconto Percentual p/ Metas em Apoios', step=1, value=10)
-
-    percentual_apoios = percentual_apoios/100
-
 if atualizar_dfs_excel:
 
     criar_dfs_excel()
@@ -219,20 +222,12 @@ if data_inicial and data_final:
 
     df_filtro_data = st.session_state.df_historico[(st.session_state.df_historico['Apenas Data']>=data_inicial) & 
                                                    (st.session_state.df_historico['Apenas Data']<=data_final)].reset_index(drop=True)
-    
-    for index in range(len(df_filtro_data)):
 
-        rota = df_filtro_data.at[index, 'Rota']
-
-        if rota=='Apoio':
-
-            df_filtro_data.at[index, 'Consumo estimado'] = df_filtro_data.at[index, 'Consumo estimado']*(1-percentual_apoios)
-
-    df_filtro_data['meta_batida'] = df_filtro_data.apply(lambda row: 1 if row['Consumo real'] >= row['Consumo estimado'] else 0, axis = 1)
+    df_filtro_data['meta_batida'] = df_filtro_data.apply(lambda row: 1 if row['Média'] >= row['Meta'] else 0, axis = 1)
     
     with row0[0]:
     
-        tipo_analise = st.radio('Tipo de Análise', ['Motorista', 'Tipo de Veículo', 'Metas Batidas'], index=None)
+        tipo_analise = st.radio('Tipo de Análise', ['Motorista', 'Tipo de Veículo'], index=None)
 
     with row1[0]:
 
@@ -376,17 +371,5 @@ if data_inicial and data_final:
 
                     grid_response = AgGrid(df_resumo_performance_motorista_veiculo, gridOptions=gridOptions, enable_enterprise_modules=False, 
                                             fit_columns_on_grid_load=True)
-
-    elif tipo_analise=='Metas Batidas':
-
-        df_filtro_colunas = df_filtro_data[['Colaborador', 'Veiculo', 'Consumo real', 'Consumo estimado', 'meta_batida']]
-
-        df_filtro_colunas = df_filtro_colunas.rename(columns={'Consumo real': 'Média Km/l', 'Consumo estimado': 'Meta Km/l', 'meta_batida': 'Metas Batidas'})
-
-        df_filtro_colunas['Meta Km/l'] = round(df_filtro_colunas['Meta Km/l'], 1)
-
-        df_filtro_metas = df_filtro_colunas[df_filtro_colunas['Metas Batidas']==1][['Colaborador', 'Veiculo', 'Média Km/l', 'Meta Km/l']].reset_index(drop=True)
-
-        exibir_tabela(df_filtro_metas)
 
         
