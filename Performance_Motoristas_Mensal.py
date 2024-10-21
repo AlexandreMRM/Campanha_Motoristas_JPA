@@ -247,7 +247,7 @@ if ano_analise and mes_analise:
 
             tipo_veiculo = selected_rows['Tipo de Veiculo'].iloc[0]
 
-            df_tipo_veiculo = montar_df_analise_mensal(df_filtro_data, 'Tipo de Veiculo', tipo_veiculo)
+            df_tipo_veiculo = montar_df_analise_mensal(st.session_state.df_historico, 'Tipo de Veiculo', tipo_veiculo)
 
             with row2[1]:
 
@@ -317,7 +317,7 @@ if ano_analise and mes_analise:
 
             motorista = selected_rows['Colaborador'].iloc[0]
 
-            df_motorista = montar_df_analise_mensal(df_filtro_data, 'Colaborador', motorista)
+            df_motorista = montar_df_analise_mensal(st.session_state.df_historico, 'Colaborador', motorista)
 
             with row2[1]:
 
