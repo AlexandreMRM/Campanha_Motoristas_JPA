@@ -72,9 +72,9 @@ def plotar_listas_analise(df_ref, coluna_df_ref, subheader):
 def montar_df_analise_mensal(df_ref, coluna_ref, info_filtro):
 
     df_mensal = df_ref[(df_ref[coluna_ref] == info_filtro)].groupby('ano_mes')\
-        .agg({'Meta': 'count', 'meta_batida': 'sum', 'ano': 'first', 'mes': 'first', 'Colaborador': 'first'}).reset_index()
+        .agg({'Meta': 'count', 'meta_batida': 'sum', 'ano': 'first', 'mes': 'first'}).reset_index()
 
-    df_mensal = df_mensal.rename(columns = {'Meta': 'serviços', 'Colaborador': 'colaborador'})
+    df_mensal = df_mensal.rename(columns = {'Meta': 'serviços'})
 
     df_mensal['performance'] = round(df_mensal['meta_batida'] / df_mensal['serviços'], 2)
 
