@@ -42,7 +42,7 @@ def criar_dfs_excel():
 
     st.session_state.df_historico['Meta'] = pd.to_numeric(st.session_state.df_historico['Meta'], errors='coerce')
 
-    st.session_state.df_historico['Data de Abastecimento'] = pd.to_datetime(st.session_state.df_historico['Data de Abastecimento'], format='%Y-%m-%d %H:%M:%S')
+    st.session_state.df_historico['Data de Abastecimento'] = pd.to_datetime(st.session_state.df_historico['Data de Abastecimento'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
     
     st.session_state.df_historico['ano'] = st.session_state.df_historico['Data de Abastecimento'].dt.year
 
